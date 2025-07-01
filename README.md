@@ -174,7 +174,7 @@ hay que añadir esto
 ```
 ## Intrucciones de uso
 ### 1. Visualizacion de datos 
-Ingresar a Kibana `http://localhost:5601` y crear una “Data View” basada en el índice eventos_filtrados.
-  
+* Ingresar a Kibana `http://localhost:5601` y crear una “Data View” basada en el índice eventos_filtrados.
+* Para monitorear el comportamiento del cache, se debe ingresar a `http://localhost:7000`, en base a las mejores metricas obtenidas en la Tarea 1
 
 
