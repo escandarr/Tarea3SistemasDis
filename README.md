@@ -177,4 +177,49 @@ hay que añadir esto
 * Ingresar a Kibana `http://localhost:5601` y crear una “Data View” basada en el índice eventos_filtrados.
 * Para monitorear el comportamiento del cache, se debe ingresar a `http://localhost:7000`, en base a las mejores metricas obtenidas en la Tarea 1
 
+### 2. Levantar servicios base `MongoDB, Redis, Elasticsearch` y `Kibana`
+```bash
+sudo docker compose up -d --build mongodb redis elasticsearch kibana
+```
+### 3. Una vez que esten cargados los modulos anteriores, ejecutar el `scraper` para estraer los eventos desde Waze y luego alamcenarlos en `MongoDB`, hasta que se complete el total de eventos
+```bash
+sudo docker compose run --rm scraper
+```
+### 4. Luego se podrecede en el filtrado y normalizacion de los datos. Esto exportará los datos filtrados a un archivo `eventos_sin_filtrar.csv` dentro de `./salida`
+
+```bash
+sudo docker compose build filtrado
+sudo docker compose run --rm filtrado
+```
+### 5. Ya con los datos filtrados, se procede en ejecutar los scripts de Pig
+```bash
+sudo docker compose build pig
+sudo docker compose run --rm pig
+```
+
+* Dentro de la terminal del contenedor, ejecutar los comandos: 
+```bash
+pig -x local /data/script.pig
+pig -x local /data/comuna.pig
+pig -x local /data/tipo.pig
+pig -x local /data/fecha.pig
+```
+* Esto genera los archivos ya procesados `/salida/eventos_filtrados/`; `/salida/salida_pig/comuna/`; `/salida/salida_pig/tipo/`; `/salida/salida_pig/fecha/` 
+
+### 6.  Para enviar los eventos filtrados a Elasticsearch. Esto carga los datos procesados a Elasticsearch `eventos_filtrados`
+```bash
+sudo docker compose run --rm to_elasticsearch
+```
+
+### 7. Luego para ver el flujo de las consultas y activar el modulo de cache
+```bash
+sudo docker compose up -d  cache_monitor generador
+```
+
+Esto hace que:
+* El generador consulte eventos desde Elasticsearch.
+* `Redis` almacene caché de los eventos consultados.
+* El visualizador de caché muestren el comportamiento (hits/misses).
+
+
 
