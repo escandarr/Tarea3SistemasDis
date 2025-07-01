@@ -211,7 +211,7 @@ pig -x local /data/fecha.pig
 sudo docker compose run --rm to_elasticsearch
 ```
 
-### 7. Luego para ver el flujo de las consultas y activar el modulo de cache
+### 7. Luego para ver el flujo de las consultas y activar el módulo de cache
 ```bash
 sudo docker compose up -d  cache_monitor generador
 ```
