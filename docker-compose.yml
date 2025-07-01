@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    restart: always
+
+  scraper:
+    build:
+      context: .
+      dockerfile: scraper/Dockerfile
+    container_name: scraper
+    depends_on:
+      - mongodb
+    restart: on-failure
+    tty: true
+    stdin_open: true
+
+  generador:
+    build:
+      context: .
+      dockerfile: generador/Dockerfile
+    container_name: generador
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./salida:/app/salida
+    restart: on-failure
+    tty: true
+    stdin_open: true
+
+  filtrado:
+    # Este es el módulo encargado de filtrar y homogeneizar los eventos del scraper
+    # Este servicio toma los datos en bruto desde MongoDB y genera un CSV para usarse en apache Pig
+    build:
+      context: .
+      dockerfile: filtrado/Dockerfile
+    container_name: filtrado
+    depends_on:
+      - mongodb
+    volumes:
+      - ./salida:/app/salida
+    restart: on-failure
+    tty: true
+    stdin_open: true
+
+  monitor:
+    build:
+      context: .
+      dockerfile: monitor/Dockerfile
+    container_name: monitor
+    ports:
+      - "5000:5000"
+    restart: on-failure
+    tty: true
+    stdin_open: true
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 100mb                            
+      --maxmemory-policy allkeys-lfu
+    restart: always
+
+  cache_monitor:
+    build:
+      context: .
+      dockerfile: cache_monitor/Dockerfile
+    container_name: cache_monitor
+    ports:
+      - "7000:7000"
+    depends_on:
+      - redis
+    restart: on-failure
+    tty: true
+    stdin_open: true
+
+  pig:
+    # Este es el módulo para el procesamiento en apache Pig
+    # Aca se ejecutan los scripts ubicados en la carpeta ./pig para transformar y agregar datos desde el CSV
+    # Luego el volumen ./salida permite que Pig lea los datos filtrados y escriba sus resultados
+    build:
+      context: ./pig
+      dockerfile: Dockerfile
+    container_name: pig
+    volumes:
+      - ./pig/script.pig:/data/script.pig
+      - ./pig/comuna.pig:/data/comuna.pig
+      - ./pig/tipo.pig:/data/tipo.pig
+      - ./pig/fecha.pig:/data/fecha.pig
+      - ./salida:/data
+    depends_on:
+      - filtrado  # Espera a que el CSV limpio esté disponible
+    command: /bin/bash
+    tty: true
+    stdin_open: true
+
+  visualizador:
+    build:
+      context: ./visualizador
+    container_name: visualizador
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./salida/salida_pig:/data
+    depends_on:
+      - pig
+    restart: on-failure
+
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  to_elasticsearch:
+    build:
+      context: ./to_elasticsearch
+    container_name: to_elasticsearch
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./salida:/app/salida
+    restart: on-failure
+
+volumes:
+  esdata:

@@ -1,0 +1,55 @@
+<!-- monitor/templates/index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitor de Tráfico</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Consultas por Segundo (Realtime)</h1>
+    <canvas id="grafico" width="600" height="400"></canvas>
+
+    <script>
+        const ctx = document.getElementById('grafico').getContext('2d');
+        const grafico = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Eventos',
+                    data: [],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        const socket = io();
+
+        let ultimoSegundo = Math.floor(Date.now() / 1000);
+        let eventosEsteSegundo = 0;
+
+        socket.on('nuevo_evento', function (data) {
+            const ahora = Math.floor(Date.now() / 1000);
+            if (ahora === ultimoSegundo) {
+                eventosEsteSegundo++;
+            } else {
+                grafico.data.labels.push(new Date().toLocaleTimeString());
+                grafico.data.datasets[0].data.push(eventosEsteSegundo);
+                grafico.update();
+                eventosEsteSegundo = 1;
+                ultimoSegundo = ahora;
+            }
+        });
+    </script>
+</body>
+</html>

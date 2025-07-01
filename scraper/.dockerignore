@@ -1,0 +1,23 @@
+# Ignorar carpetas de entorno virtual
+venv/
+.env/
+
+# Ignorar cachés de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignorar archivos de logs
+*.log
+
+# Ignorar configuraciones locales de editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Ignorar archivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
